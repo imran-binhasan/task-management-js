@@ -1,22 +1,27 @@
-export interface ApiResponse<T = any> {
-  data: T;
-  status: 'success' | 'error' | 'warning';
-  message?: string;
-  meta: {
-    timestamp: string;
-    pagination?: PaginationMeta;
-  };
-  errors?: string[];
-}
-
 export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
 }
 
+export interface ResponseMeta {
+    timestamp: string;
+    requestId: string;
+    pagination?: PaginationMeta;
+}
+
+export interface ApiResponse<T> {
+    data: T;
+    status: 'success' | 'error';
+    message?: string;
+    errorCode?: string;
+    errors?: Record<string, string[]>;
+    meta: ResponseMeta;
+}
+
+/** Shape returned by service methods that support pagination */
 export interface PaginatedServiceResponse<T> {
-  items: T[];
-  pagination: PaginationMeta;
+    items: T[];
+    pagination: PaginationMeta;
 }
