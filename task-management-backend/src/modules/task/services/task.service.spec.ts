@@ -84,6 +84,27 @@ describe('TaskService', () => {
     });
   });
 
+  it('applies assigned user filter for legacy payload using id', async () => {
+    const qb = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+    };
+    taskRepo.createQueryBuilder.mockReturnValue(qb);
+
+    await service.findAll(
+      { id: 77, email: 'legacy@example.com', role: Role.USER } as any,
+      { page: 1, limit: 10 },
+    );
+
+    expect(qb.where).toHaveBeenCalledWith('task.assignedToId = :userId', {
+      userId: 77,
+    });
+  });
+
   it('blocks non-admin from changing admin-only fields', async () => {
     taskRepo.findOne.mockResolvedValue({
       id: 1,

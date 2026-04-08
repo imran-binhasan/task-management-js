@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: task-management-postgres
+    environment:
+      POSTGRES_DB: task_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d task_management']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./task-management-backend
+      dockerfile: Dockerfile
+    container_name: task-management-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/task_management
+      JWT_SECRET: super_secret_for_demo_only
+      JWT_EXPIRES_IN: 1h
+      FRONTEND_URL: http://localhost:3001
+      PKG_MANAGER: yarn
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./task-management-frontend
+      dockerfile: Dockerfile
+    container_name: task-management-frontend
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:3000/api/v1
+      PKG_MANAGER: npm
+    ports:
+      - '3001:3000'
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

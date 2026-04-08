@@ -15,12 +15,22 @@ export class UserService {
   async findAll(query: QueryUserDto): Promise<PaginatedServiceResponse<User>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const search = query.search?.trim();
 
-    const [items, total] = await this.userRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.userRepo
+      .createQueryBuilder('user')
+      .orderBy('user.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (search) {
+      qb.where(
+        '(LOWER(user.name) LIKE :search OR LOWER(user.email) LIKE :search)',
+        { search: `%${search.toLowerCase()}%` },
+      );
+    }
+
+    const [items, total] = await qb.getManyAndCount();
 
     return {
       items,

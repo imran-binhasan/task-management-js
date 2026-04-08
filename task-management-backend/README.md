@@ -81,6 +81,238 @@ Each entry includes:
 - Base: `http://localhost:3000/api/v1`
 - Swagger UI: `http://localhost:3000/docs`
 
+## Frontend Integration Guide
+
+This section describes the request/response shapes the frontend should expect.
+
+### Auth
+
+- Obtain a token by calling `POST /api/v1/auth/login`.
+- Send the token on every protected request:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+### Standard Success Envelope
+
+Every successful response is wrapped by the global response interceptor:
+
+```json
+{
+  "data": {},
+  "status": "success",
+  "meta": {
+    "timestamp": "2026-04-08T10:20:30.000Z",
+    "requestId": "k8z3q1xv"
+  }
+}
+```
+
+### Pagination Envelope
+
+List endpoints return `data` as an array and include pagination meta:
+
+```json
+{
+  "data": [],
+  "status": "success",
+  "meta": {
+    "timestamp": "2026-04-08T10:20:30.000Z",
+    "requestId": "k8z3q1xv",
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 145,
+      "totalPages": 8
+    }
+  }
+}
+```
+
+### Error Envelope
+
+All errors are normalized by the global exception filter:
+
+```json
+{
+  "data": null,
+  "status": "error",
+  "message": "Validation failed",
+  "errorCode": "BAD_REQUEST",
+  "errors": {
+    "title": ["must be longer than or equal to 3 characters"]
+  },
+  "meta": {
+    "timestamp": "2026-04-08T10:20:30.000Z",
+    "path": "/api/v1/tasks",
+    "method": "POST"
+  }
+}
+```
+
+### Roles and Enums
+
+- Roles: `ADMIN`, `USER`
+- Task status: `PENDING`, `PROCESSING`, `DONE`
+- Audit actions: `TASK_CREATED`, `TASK_UPDATED`, `TASK_DELETED`, `STATUS_CHANGED`, `TASK_ASSIGNED`
+
+### Resource Shapes
+
+User (password never returned):
+
+```json
+{
+  "id": 1,
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "role": "ADMIN",
+  "createdAt": "2026-04-08T10:20:30.000Z",
+  "updatedAt": "2026-04-08T10:20:30.000Z",
+  "deletedAt": null
+}
+```
+
+Task (includes relations when fetched):
+
+```json
+{
+  "id": 10,
+  "title": "Prepare monthly report",
+  "description": "Compile sales numbers and draft executive summary.",
+  "status": "PENDING",
+  "assignedToId": 2,
+  "createdById": 1,
+  "assignedTo": { "id": 2, "name": "User", "email": "user@example.com", "role": "USER", "createdAt": "...", "updatedAt": "...", "deletedAt": null },
+  "createdBy": { "id": 1, "name": "Admin", "email": "admin@example.com", "role": "ADMIN", "createdAt": "...", "updatedAt": "...", "deletedAt": null },
+  "createdAt": "2026-04-08T10:20:30.000Z",
+  "updatedAt": "2026-04-08T10:20:30.000Z",
+  "deletedAt": null
+}
+```
+
+Audit log:
+
+```json
+{
+  "id": 99,
+  "actorId": 1,
+  "actorName": "Admin User",
+  "action": "TASK_UPDATED",
+  "taskId": 10,
+  "before": { "status": "PENDING" },
+  "after": { "status": "PROCESSING" },
+  "summary": "Status changed: PENDING -> PROCESSING",
+  "actor": { "id": 1, "name": "Admin User", "email": "admin@example.com", "role": "ADMIN", "createdAt": "...", "updatedAt": "...", "deletedAt": null },
+  "createdAt": "2026-04-08T10:20:30.000Z"
+}
+```
+
+### Endpoints
+
+#### Auth
+
+`POST /api/v1/auth/login`
+
+Request:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "admin123"
+}
+```
+
+Response `data`:
+
+```json
+{
+  "accessToken": "<jwt>",
+  "user": {
+    "id": 1,
+    "name": "Admin User",
+    "email": "admin@example.com",
+    "role": "ADMIN"
+  }
+}
+```
+
+`GET /api/v1/auth/me` (auth required)
+
+Response `data`: user object
+
+#### Users (admin only)
+
+`GET /api/v1/users?page=1&limit=20`
+
+Response `data`: array of users (paginated)
+
+`GET /api/v1/users/:id`
+
+Response `data`: user object
+
+#### Tasks
+
+`GET /api/v1/tasks?page=1&limit=20`
+
+- Admin: all tasks
+- User: only tasks assigned to the user
+
+Response `data`: array of tasks (paginated)
+
+`GET /api/v1/tasks/:id`
+
+- Admin: any task
+- User: only if assigned
+
+Response `data`: task object
+
+`POST /api/v1/tasks` (admin only)
+
+Request:
+
+```json
+{
+  "title": "Prepare monthly report",
+  "description": "Compile sales numbers and draft executive summary.",
+  "assignedToId": 2
+}
+```
+
+Notes:
+- `assignedToId` must be a USER id or omitted/null.
+
+Response `data`: created task
+
+`PATCH /api/v1/tasks/:id`
+
+- Admin: can update `title`, `description`, `status`, `assignedToId`
+- User: can update only `status` on their assigned tasks
+
+Example (user updating status):
+
+```json
+{
+  "status": "PROCESSING"
+}
+```
+
+Response `data`: updated task
+
+`DELETE /api/v1/tasks/:id` (admin only)
+
+- Soft delete; returns HTTP 204 No Content.
+
+#### Audit Logs (admin only)
+
+`GET /api/v1/audit-logs?taskId=1&actorId=2&action=STATUS_CHANGED&page=1&limit=20`
+
+Response `data`: array of audit logs (paginated)
+
+### CORS Notes
+
+Allowed origins include localhost dev ports and `FRONTEND_URL` if provided in env.
+
 ## Main Endpoints
 
 - `POST /api/v1/auth/login`
@@ -138,10 +370,9 @@ Services:
 ## Demo Credentials
 
 - Bootstrap users are created automatically (if missing):
-  - `admin@example.com` (`ADMIN`)
-  - `user@example.com` (`USER`)
-- Passwords are generated randomly on first creation and written to application logs once.
-- User identity fields are not read from environment variables.
+  - `admin@example.com` (`ADMIN`) — Imran Bin Hasan — password: `admin123`
+  - `user@example.com` (`USER`) — Sara Rahman — password: `user123`
+- These demo credentials are fixed for the evaluation; do not use in production.
 
 ## Validation and Build
 

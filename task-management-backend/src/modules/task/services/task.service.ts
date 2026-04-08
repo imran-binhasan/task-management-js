@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -37,6 +38,8 @@ export class TaskService {
   ): Promise<PaginatedServiceResponse<Task>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const search = query.search?.trim();
+    const currentUserId = this.resolveUserId(user);
 
     const qb = this.taskRepo
       .createQueryBuilder('task')
@@ -47,7 +50,25 @@ export class TaskService {
       .take(limit);
 
     if (user.role !== Role.ADMIN) {
-      qb.where('task.assignedToId = :userId', { userId: user.sub });
+      qb.where('task.assignedToId = :userId', { userId: currentUserId });
+    }
+
+    if (search) {
+      const normalizedSearch = `%${search.toLowerCase()}%`;
+      const searchCondition = `(
+        LOWER(task.title) LIKE :search
+        OR LOWER(task.description) LIKE :search
+        OR LOWER(assignedTo.name) LIKE :search
+        OR LOWER(assignedTo.email) LIKE :search
+        OR LOWER(createdBy.name) LIKE :search
+        OR LOWER(createdBy.email) LIKE :search
+      )`;
+
+      if (user.role !== Role.ADMIN) {
+        qb.andWhere(searchCondition, { search: normalizedSearch });
+      } else {
+        qb.where(searchCondition, { search: normalizedSearch });
+      }
     }
 
     const [items, total] = await qb.getManyAndCount();
@@ -64,6 +85,8 @@ export class TaskService {
   }
 
   async findOne(id: number, user: JwtUser): Promise<Task> {
+    const currentUserId = this.resolveUserId(user);
+
     const task = await this.taskRepo.findOne({
       where: { id },
       relations: { assignedTo: true, createdBy: true },
@@ -71,7 +94,7 @@ export class TaskService {
 
     if (!task) throw new NotFoundException(`Task #${id} not found`);
 
-    if (user.role !== Role.ADMIN && task.assignedToId !== user.sub) {
+    if (user.role !== Role.ADMIN && task.assignedToId !== currentUserId) {
       throw new ForbiddenException('You do not have access to this task');
     }
 
@@ -81,6 +104,7 @@ export class TaskService {
   // ─── Commands ────────────────────────────────────────────────────────────
 
   async create(dto: CreateTaskDto, user: JwtUser): Promise<Task> {
+    const currentUserId = this.resolveUserId(user);
     await this.validateAssignee(dto.assignedToId);
     const actorName = await this.resolveActorName(user);
 
@@ -92,14 +116,14 @@ export class TaskService {
         title: dto.title,
         description: dto.description,
         assignedToId: dto.assignedToId ?? null,
-        createdById: user.sub,
+        createdById: currentUserId,
       });
 
       const saved = await taskRepo.save(task);
 
       await this.auditService.log(
         {
-          actorId: user.sub,
+          actorId: currentUserId,
           actorName,
           action: AuditAction.TASK_CREATED,
           taskId: saved.id,
@@ -115,6 +139,7 @@ export class TaskService {
   }
 
   async update(id: number, dto: UpdateTaskDto, user: JwtUser): Promise<Task> {
+    const currentUserId = this.resolveUserId(user);
     const task = await this.taskRepo.findOne({
       where: { id },
       relations: { assignedTo: true, createdBy: true },
@@ -125,7 +150,7 @@ export class TaskService {
     const isAdmin = user.role === Role.ADMIN;
 
     if (!isAdmin) {
-      if (task.assignedToId !== user.sub) {
+      if (task.assignedToId !== currentUserId) {
         throw new ForbiddenException('You do not have access to this task');
       }
 
@@ -179,7 +204,7 @@ export class TaskService {
         auditPromises.push(
           this.auditService.log(
             {
-              actorId: user.sub,
+              actorId: currentUserId,
               actorName,
               action: AuditAction.STATUS_CHANGED,
               taskId: saved.id,
@@ -196,7 +221,7 @@ export class TaskService {
         auditPromises.push(
           this.auditService.log(
             {
-              actorId: user.sub,
+              actorId: currentUserId,
               actorName,
               action: AuditAction.TASK_ASSIGNED,
               taskId: saved.id,
@@ -213,7 +238,7 @@ export class TaskService {
         auditPromises.push(
           this.auditService.log(
             {
-              actorId: user.sub,
+              actorId: currentUserId,
               actorName,
               action: AuditAction.TASK_UPDATED,
               taskId: saved.id,
@@ -233,6 +258,7 @@ export class TaskService {
   }
 
   async remove(id: number, user: JwtUser): Promise<void> {
+    const currentUserId = this.resolveUserId(user);
     const task = await this.taskRepo.findOne({ where: { id } });
     if (!task) throw new NotFoundException(`Task #${id} not found`);
     const actorName = await this.resolveActorName(user);
@@ -245,7 +271,7 @@ export class TaskService {
 
       await this.auditService.log(
         {
-          actorId: user.sub,
+          actorId: currentUserId,
           actorName,
           action: AuditAction.TASK_DELETED,
           taskId: id,
@@ -303,7 +329,18 @@ export class TaskService {
   private async resolveActorName(user: JwtUser): Promise<string | null> {
     if (user.name) return user.name;
 
-    const actor = await this.userService.findById(user.sub);
+    const actor = await this.userService.findById(this.resolveUserId(user));
     return actor.name;
+  }
+
+  private resolveUserId(user: JwtUser): number {
+    const legacyUser = user as JwtUser & { id?: number };
+    const id = user.sub ?? legacyUser.id;
+
+    if (!id || Number.isNaN(Number(id))) {
+      throw new UnauthorizedException('Invalid token payload: missing user id');
+    }
+
+    return Number(id);
   }
 }

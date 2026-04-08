@@ -25,6 +25,7 @@ export class UserController {
   @Get()
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({ name: 'search', required: false, type: String, example: 'john' })
   @ApiOperation({
     summary: 'List all users',
     description:

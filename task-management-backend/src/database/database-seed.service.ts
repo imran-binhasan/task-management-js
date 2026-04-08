@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+
 import { Role } from 'src/common/enums/role.enum';
 import { User } from 'src/modules/user/entities/user.entity';
 import { Repository } from 'typeorm';
@@ -12,18 +12,15 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
   private readonly defaultSeedUsers = [
     {
       name: 'Imran Bin Hasan',
-      email: 'imran@example.com',
+      email: 'admin@example.com',
       role: Role.ADMIN,
+      password: 'admin123',
     },
     {
       name: 'Sara Rahman',
-      email: 'sara@example.com',
+      email: 'user@example.com',
       role: Role.USER,
-    },
-    {
-      name: 'Mahir Hasan',
-      email: 'mahir@example.com',
-      role: Role.USER,
+      password: 'user123',
     },
   ] as const;
 
@@ -46,6 +43,7 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
     name: string;
     email: string;
     role: Role;
+    password: string;
   }): Promise<void> {
     const existing = await this.userRepo
       .createQueryBuilder('user')
@@ -61,8 +59,7 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
       return;
     }
 
-    const bootstrapPassword = this.generateBootstrapPassword();
-    const password = await bcrypt.hash(bootstrapPassword, 10);
+    const password = await bcrypt.hash(userData.password, 10);
     const user = this.userRepo.create({
       name: userData.name,
       email: userData.email,
@@ -73,12 +70,9 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
     await this.userRepo.save(user);
     this.logger.log(`Created seeded user ${userData.email}`);
     this.logger.warn(
-      `Bootstrap credentials for ${userData.email}: ${bootstrapPassword}`,
+      `Bootstrap credentials for ${userData.email}: ${userData.password}`,
     );
   }
 
-  private generateBootstrapPassword(): string {
-    // Keeps generated credentials URL-safe and easy to paste in terminals.
-    return randomBytes(12).toString('base64url');
-  }
+
 }

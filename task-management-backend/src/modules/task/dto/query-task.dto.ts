@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class QueryTaskDto {
   @ApiPropertyOptional({ example: 1, default: 1 })
@@ -17,4 +17,13 @@ export class QueryTaskDto {
   @Min(1)
   @Max(100)
   limit = 20;
+
+  @ApiPropertyOptional({
+    example: 'report',
+    description: 'Search by title, description, assignee, or creator.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  search?: string;
 }
