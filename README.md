@@ -1,116 +1,102 @@
-# TaskFlow — Task Management System
+# Task Management System
 
-Role-based task management with audit logging. Full stack: Next.js frontend, NestJS backend, PostgreSQL (TypeORM). Includes a root Docker Compose to run frontend, backend, and Postgres.
+## Overview
 
-## Quick Start (Docker)
+- Role-based access control (Admin/User)
+- Task assignment and management
+- Audit logging with before/after snapshots
+- Modular, clean codebase (NestJS backend, Next.js frontend)
+- One-command deployment with Docker Compose
 
-Requirements: Docker & Docker Compose
+## Total Time Taken
 
-From repo root:
+**Estimated total time:** 3.5 to 4 hours
 
-```bash
-docker compose up --build
-```
+- Backend & frontend initialization: ~20 min
+- Schema design & code review: ~30 min
+- AI-assisted CRUD, audit log, API docs, test files: ~1.2 hours
+- Frontend layout, UI, API integration: ~1.3 hour
+- Dockerization & optimization: ~10 min
+- Manual testing & review: ~30 min
 
-- Backend API: http://localhost:3000/api/v1
-- Frontend: http://localhost:3001
-- Swagger docs: http://localhost:3000/docs
+If fully AI-generated, could be done in 30–40 min, but 30% of the code was written/reviewed manually for quality.
 
-## Demo credentials
+## Tech Stack
 
-- Admin: `admin@example.com` — Imran Bin Hasan — password: `admin123`
-- User:  `user@example.com`  — Sara Rahman    — password: `user123`
+### Backend
+- **NestJS** (TypeScript, modular architecture)
+- **TypeORM** (PostgreSQL)
+- **Swagger** (API documentation)
+- **Jest** (unit & integration testing)
+- **Docker** (containerization)
 
-> These credentials are for evaluation/demo only. Do not use in production.
+### Frontend
+- **Next.js 16** (React framework)
+- **TanStack Query** (data fetching)
+- **Zustand** (state management)
+- **Tailwind CSS** (styling)
 
-## Local development
+## Features
 
-Backend (NestJS + TypeORM + Yarn):
+- **Role-based access control** (Admin/User)
+- **Server-side route protection** (Next.js proxy)
+- **Audit logging** (with before/after snapshots, ACID transaction)
+- **Swagger API docs** (`/docs` endpoint)
+- **Test files** (Jest)
+- **Modular, clean code structure**
+- **Quick-fill demo buttons** for easy testing
+- **Docker Compose** for one-command setup
 
-```bash
-cd task-management-backend
-# install & build
-yarn install
-yarn build
-# run in dev
-yarn start:dev
-```
+## Out-of-Scope/Extra
 
-Frontend (Next.js + npm):
+- Full audit log with before/after state
+- Transactional audit logging for reliability
+- Server-side route gating (not just client-side)
+- Clean modular code for easy extension
 
-```bash
-cd task-management-frontend
-npm ci
-npm run dev
-# Or build for production
-npm run build
-npm start
-```
+## Demo Credentials
 
-If you run frontend on a different host/port, set NEXT_PUBLIC_API_URL to point at the backend (e.g., `http://localhost:3000/api/v1`).
+Use these credentials to log in as Admin or User:
 
-## Notes about auth & proxy
+**Admin:**
+- Name: Imran Bin Hasan
+- Email: admin@example.com
+- Password: admin123
 
-- JWTs are stored client-side (persisted via zustand). The frontend sends Authorization: Bearer <token> on API requests.
-- For server-side route gating we use Next 16 `proxy.ts` (Node runtime). `middleware.ts` was removed as deprecated.
-- API endpoints are protected by JWT-based AuthGuard and RolesGuard. Audit logs are recorded transactionally with before/after snapshots.
+**User:**
+- Name: Sara Rahman
+- Email: user@example.com
+- Password: user123
 
-## Docker composition (high-level)
+## Major AI Prompts Used
 
-- Postgres service (postgres:16)
-- Backend service (builds from task-management-backend; uses yarn)
-- Frontend service (builds from task-management-frontend; uses npm)
+AI was used to accelerate development for basic, repetitive tasks:
 
-Start with `docker compose up --build` and watch the backend logs for seeded user creation if database is empty.
+- **CRUD generation:**
+	- Prompt: "NestJS CRUD endpoints and services for Task and AuditLog entities with ACID support."
+	- Reason: CRUD logic is boilerplate and well-suited for AI generation.
+- **Test scripts:**
+	- Prompt: "Generate Jest test files for the Task and AuditLog modules."
+	- Reason: To quickly scaffold tests for coverage.
+- **API documentation:**
+	- Prompt: "Add Swagger decorators to all controllers and DTOs."
+	- Reason: To ensure comprehensive API docs with minimal manual effort.
 
-## Running tests
+All AI-generated code was reviewed and ~30% was written or refactored manually for quality, reliability, and alignment with requirements.
 
-Backend tests (unit & integration with jest):
+## Running the Project
 
-```bash
-cd task-management-backend
-# run tests
-yarn test
-```
+1. Clone the repository
+2. Run:
+	 ```sh
+	 docker compose up --build
+	 ```
+3. Access the frontend at http://localhost:3001 and backend API docs at http://localhost:3000/docs
 
-Frontend checks:
+## Summary
 
-```bash
-cd task-management-frontend
-npm run lint
-```
+- Role-based access enforced at both API and UI layers
+- Full audit logging with before/after snapshots in a single transaction
+- Clean modular NestJS backend, Next.js frontend with server-side route gating
+- One-command Docker Compose setup
 
-## API examples (curl)
-
-Login (obtain token):
-
-```bash
-curl -s -X POST http://localhost:3000/api/v1/auth/login -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}' | jq
-```
-
-Create task (authenticated):
-
-```bash
-TOKEN="<ACCESS_TOKEN>"
-curl -s -X POST http://localhost:3000/api/v1/tasks -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
-  -d '{"title":"Demo task","description":"Created during demo","assignedToId":2}' | jq
-```
-
-Get audit logs (admin only):
-
-```bash
-curl -H "Authorization: Bearer $TOKEN" "http://localhost:3000/api/v1/audit-logs?page=1&limit=20" | jq
-```
-
-## Deliverables checklist
-
-- Source code: repository contains `task-management-backend/` and `task-management-frontend/` directories
-- Docker Compose: `docker-compose.yml` at repo root to run all services
-- Demo credentials: listed above
-- Swagger documentation: available at `/docs` after backend runs
-- Audit logs: accessible via `/api/v1/audit-logs` (admin)
-
-## Demo video guidance
-
-See the separate 5-minute demo script below for a suggested recording plan.
