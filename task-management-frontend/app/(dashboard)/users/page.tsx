@@ -130,14 +130,20 @@ export default function UsersPage() {
                 </td>
               </tr>
             ) : (
-              data.users.map((user, index) => (
-                <tr
-                  key={user.id}
-                  className="border-b transition-colors hover:bg-[var(--color-surface-2)]"
-                  style={{ borderColor: "var(--color-border-light)" }}
-                >
-                  <td className="px-5 py-3.5">
-                    <input type="checkbox" className="w-4 h-4" />
+              [...data.users]
+                .sort((a, b) => {
+                  if (a.role === "ADMIN" && b.role !== "ADMIN") return -1;
+                  if (a.role !== "ADMIN" && b.role === "ADMIN") return 1;
+                  return 0;
+                })
+                .map((user, index) => (
+                  <tr
+                    key={user.id}
+                    className="border-b transition-colors hover:bg-[var(--color-surface-2)]"
+                    style={{ borderColor: "var(--color-border-light)" }}
+                  >
+                    <td className="px-5 py-3.5">
+                      <input type="checkbox" className="w-4 h-4" />
                   </td>
                   <td
                     className="px-5 py-3.5 text-sm"

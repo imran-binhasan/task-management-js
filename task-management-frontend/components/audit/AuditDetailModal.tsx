@@ -49,10 +49,11 @@ export function AuditDetailModal({ open, onOpenChange, log }: AuditDetailModalPr
               <pre
                 className="p-4 rounded overflow-auto text-[13px] font-mono leading-relaxed"
                 style={{
-                  backgroundColor: "#1A1D23",
-                  color: "white",
+                  backgroundColor: "#fff",
+                  color: "#222",
                   borderRadius: "var(--radius-md)",
                   maxHeight: "300px",
+                  border: "1px solid #eee",
                 }}
                 dangerouslySetInnerHTML={{
                   __html: formatJSON(log.before),
@@ -70,10 +71,11 @@ export function AuditDetailModal({ open, onOpenChange, log }: AuditDetailModalPr
               <pre
                 className="p-4 rounded overflow-auto text-[13px] font-mono leading-relaxed"
                 style={{
-                  backgroundColor: "#1A1D23",
-                  color: "white",
+                  backgroundColor: "#fff",
+                  color: "#222",
                   borderRadius: "var(--radius-md)",
                   maxHeight: "300px",
+                  border: "1px solid #eee",
                 }}
                 dangerouslySetInnerHTML={{
                   __html: formatJSON(log.after),

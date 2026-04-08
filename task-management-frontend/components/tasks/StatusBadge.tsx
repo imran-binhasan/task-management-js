@@ -7,18 +7,18 @@ interface StatusBadgeProps {
 export function StatusBadge({ status }: StatusBadgeProps) {
   const config = {
     PENDING: {
-      bg: "var(--color-warning-bg)",
-      color: "var(--color-warning)",
+      bg: "#FFF7E0", // solid light yellow
+      color: "#B26A00", // dark yellow text
       label: "Pending",
     },
     PROCESSING: {
-      bg: "var(--color-info-bg)",
-      color: "var(--color-info)",
+      bg: "#E6F0FF", // solid light blue
+      color: "#1A5FB4", // dark blue text
       label: "Processing",
     },
     DONE: {
-      bg: "var(--color-success-bg)",
-      color: "var(--color-success)",
+      bg: "#E6F9F0", // solid light green
+      color: "#1A7F5A", // dark green text
       label: "Done",
     },
   };

@@ -9,12 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# Enable corepack to ensure yarn is available in the environment
-RUN corepack enable && corepack prepare yarn@stable --activate
+# Enable corepack and pin Yarn to v1 for stability
+RUN corepack enable && corepack prepare yarn@1.22.19 --activate
 
-# Copy package manifests and install via yarn (use frozen-lockfile when present)
+# Copy package manifests and install via yarn (use immutable for Yarn 4+)
 COPY package.json yarn.lock* ./
-RUN yarn install --frozen-lockfile --network-concurrency 1 || yarn install --network-concurrency 1
+RUN yarn install --immutable || yarn install
 
 FROM node:22-bullseye-slim AS build
 WORKDIR /app
@@ -28,8 +28,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=build /app/package.json ./package.json
-# Install production deps using yarn for a clean runtime state
-RUN corepack enable && corepack prepare yarn@stable --activate && yarn install --production --frozen-lockfile --network-concurrency 1 || true
+# Install production deps using yarn v1 for a clean runtime state
+RUN corepack enable && corepack prepare yarn@1.22.19 --activate && yarn install --production --immutable || true
 COPY --from=build /app/dist ./dist
 
 EXPOSE 3000

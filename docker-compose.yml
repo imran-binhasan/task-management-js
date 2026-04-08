@@ -47,8 +47,9 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://localhost:3000/api/v1
       PKG_MANAGER: npm
+      PORT: 3001
     ports:
-      - '3001:3000'
+      - '3001:3001'
     depends_on:
       - backend
 
